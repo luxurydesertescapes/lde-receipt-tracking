@@ -1,13 +1,13 @@
 // Prisma schema for the LDE receipt tracking system.
-// Dev uses SQLite (file at prisma/dev.db, gitignored); swap the datasource
-// to postgresql when deploying (see SETUP.md).
+// Postgres (Neon) datasource — see SETUP.md's "Production database" section
+// for the switch from the original SQLite-based local dev setup.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
