@@ -35,7 +35,10 @@ export default function OrderForm({ properties, catalog }: Props) {
   const [tab, setTab] = useState<"common" | "all">("common");
   const [search, setSearch] = useState("");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [sizes, setSizes] = useState<Record<string, string>>({});
+  // Sized items (sheets, duvet covers, etc.) get one quantity per size
+  // instead of a single size picker, so an order can include e.g. 2 Queen
+  // sets and 1 King set of the same item. Keyed as sizeQuantities[itemId][size].
+  const [sizeQuantities, setSizeQuantities] = useState<Record<string, Record<string, number>>>({});
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -55,8 +58,11 @@ export default function OrderForm({ properties, catalog }: Props) {
     setQuantities((prev) => ({ ...prev, [id]: value }));
   }
 
-  function setSize(id: string, value: string) {
-    setSizes((prev) => ({ ...prev, [id]: value }));
+  function setSizeQuantity(id: string, size: string, value: number) {
+    setSizeQuantities((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], [size]: value },
+    }));
   }
 
   function addAdHocRow() {
@@ -90,17 +96,17 @@ export default function OrderForm({ properties, catalog }: Props) {
     }> = [];
 
     for (const item of catalog) {
+      if (item.sizeOptions) {
+        for (const size of item.sizeOptions) {
+          const qty = sizeQuantities[item.id]?.[size] ?? 0;
+          if (qty <= 0) continue;
+          items.push({ supplyItemId: item.id, quantity: qty, size });
+        }
+        continue;
+      }
       const qty = quantities[item.id] ?? 0;
       if (qty <= 0) continue;
-      if (item.sizeOptions && !sizes[item.id]) {
-        setError(`Pick a size for "${item.name}".`);
-        return;
-      }
-      items.push({
-        supplyItemId: item.id,
-        quantity: qty,
-        size: item.sizeOptions ? sizes[item.id] : undefined,
-      });
+      items.push({ supplyItemId: item.id, quantity: qty });
     }
 
     for (const row of adHoc) {
@@ -211,29 +217,34 @@ export default function OrderForm({ properties, catalog }: Props) {
                     {item.alternativeNote ?? item.notes}
                   </p>
                 )}
-                <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    value={quantities[item.id] ?? 0}
-                    onChange={(e) => setQuantity(item.id, Math.max(0, Number(e.target.value)))}
-                    className="w-16 rounded border border-neutral-300 p-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                  />
-                  {item.sizeOptions && (
-                    <select
-                      value={sizes[item.id] ?? ""}
-                      onChange={(e) => setSize(item.id, e.target.value)}
-                      className="rounded border border-neutral-300 p-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                    >
-                      <option value="">Size…</option>
-                      {item.sizeOptions.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+                {item.sizeOptions ? (
+                  <div className="mt-2 flex flex-col gap-1">
+                    {item.sizeOptions.map((size) => (
+                      <div key={size} className="flex items-center gap-2">
+                        <span className="w-16 shrink-0 text-xs text-neutral-500">{size}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={sizeQuantities[item.id]?.[size] ?? 0}
+                          onChange={(e) =>
+                            setSizeQuantity(item.id, size, Math.max(0, Number(e.target.value)))
+                          }
+                          className="w-16 rounded border border-neutral-300 p-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={quantities[item.id] ?? 0}
+                      onChange={(e) => setQuantity(item.id, Math.max(0, Number(e.target.value)))}
+                      className="w-16 rounded border border-neutral-300 p-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))}
