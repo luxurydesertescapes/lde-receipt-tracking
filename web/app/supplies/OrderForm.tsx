@@ -194,7 +194,7 @@ export default function OrderForm({ properties, catalog }: Props) {
               key={item.id}
               className="flex gap-3 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-2xl dark:bg-neutral-800">
+              <div className="flex h-36 w-36 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-5xl dark:bg-neutral-800">
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.imageUrl} alt="" className="h-full w-full rounded-md object-cover" />
