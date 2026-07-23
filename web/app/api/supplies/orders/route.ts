@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -43,25 +44,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown property." }, { status: 400 });
   }
 
-  const order = await prisma.supplyOrder.create({
-    data: {
-      propertyId,
-      requestedByEmail: session.user.email,
-      requestedByName: session.user.name ?? null,
-      notes,
-      items: {
-        create: items.map((item) => ({
-          supplyItemId: item.supplyItemId ?? null,
-          adHocName: item.adHocName ?? null,
-          adHocUrl: item.adHocUrl ?? null,
-          quantity: item.quantity,
-          size: item.size ?? null,
-          notes: item.notes ?? null,
-        })),
-      },
-    },
-    include: { items: true, property: true },
-  });
+  // orderNumber isn't a DB autoincrement (SQLite only allows that on the
+  // @id field, and this needs to survive the later Postgres migration
+  // unchanged) — so it's assigned here from the current max, with a few
+  // retries in case two submissions race for the same number.
+  let order;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const max = await prisma.supplyOrder.aggregate({ _max: { orderNumber: true } });
+    const orderNumber = (max._max.orderNumber ?? 0) + 1;
+    try {
+      order = await prisma.supplyOrder.create({
+        data: {
+          orderNumber,
+          propertyId,
+          requestedByEmail: session.user.email,
+          requestedByName: session.user.name ?? null,
+          notes,
+          items: {
+            create: items.map((item) => ({
+              supplyItemId: item.supplyItemId ?? null,
+              adHocName: item.adHocName ?? null,
+              adHocUrl: item.adHocUrl ?? null,
+              quantity: item.quantity,
+              size: item.size ?? null,
+              notes: item.notes ?? null,
+            })),
+          },
+        },
+        include: { items: true, property: true },
+      });
+      break;
+    } catch (err) {
+      const isOrderNumberCollision =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+      if (!isOrderNumberCollision || attempt === 4) throw err;
+    }
+  }
 
   return NextResponse.json({ order }, { status: 201 });
 }

@@ -13,7 +13,7 @@ export default async function SuppliesOrderingPage() {
 
   const catalog = items.map((item) => ({
     id: item.id,
-    name: item.name,
+    name: item.shortName ?? item.name,
     vendor: item.vendor,
     url: item.url,
     imageUrl: item.imageUrl,

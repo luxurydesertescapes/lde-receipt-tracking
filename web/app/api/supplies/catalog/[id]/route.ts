@@ -16,6 +16,7 @@ const VENDORS = [
 
 const UpdateItemSchema = z.object({
   name: z.string().min(1).optional(),
+  shortName: z.string().nullable().optional(),
   vendor: z.enum(VENDORS).optional(),
   url: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),

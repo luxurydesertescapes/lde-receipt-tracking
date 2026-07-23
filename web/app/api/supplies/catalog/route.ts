@@ -16,6 +16,7 @@ const VENDORS = [
 
 const CreateItemSchema = z.object({
   name: z.string().min(1),
+  shortName: z.string().optional(),
   vendor: z.enum(VENDORS).optional(),
   url: z.string().optional(),
   imageUrl: z.string().optional(),
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
   const item = await prisma.supplyItem.create({
     data: {
       name: data.name,
+      shortName: data.shortName || null,
       vendor: data.vendor ?? detectVendorFromUrl(data.url),
       url: data.url || null,
       imageUrl: data.imageUrl || null,

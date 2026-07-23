@@ -14,6 +14,7 @@ const prisma = new PrismaClient();
 
 interface SeedSupplyItem {
   name: string;
+  shortName: string | null;
   vendor: SupplyVendor;
   url: string | null;
   alternativeNote: string | null;
@@ -35,9 +36,15 @@ async function main() {
   for (const item of supplyItems as SeedSupplyItem[]) {
     await prisma.supplyItem.upsert({
       where: { name: item.name },
-      update: {},
+      // Existing rows are meant to be admin-editable via /supplies/catalog
+      // without a reseed clobbering those edits — except shortName, which
+      // is curated here and safe to backfill onto already-seeded rows.
+      update: {
+        shortName: item.shortName ?? undefined,
+      },
       create: {
         name: item.name,
+        shortName: item.shortName,
         vendor: item.vendor,
         url: item.url,
         alternativeNote: item.alternativeNote,

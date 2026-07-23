@@ -9,6 +9,7 @@ export default async function SupplyCatalogPage() {
   const rows = items.map((item) => ({
     id: item.id,
     name: item.name,
+    shortName: item.shortName,
     vendor: item.vendor,
     url: item.url,
     imageUrl: item.imageUrl,

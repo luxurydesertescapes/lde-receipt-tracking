@@ -47,6 +47,13 @@ export const STATUS_LABELS: Record<SupplyOrderStatus, string> = {
 // possible set, but it's what the catalog seed uses today.
 export const DEFAULT_SIZE_OPTIONS = ["Twin XL", "Queen", "King", "Cal King"];
 
+// Display form of SupplyOrder.orderNumber, e.g. 7 -> "SO-0007". The
+// createdAt date is shown alongside this everywhere it's used, not
+// replaced by it.
+export function formatOrderNumber(orderNumber: number): string {
+  return `SO-${String(orderNumber).padStart(4, "0")}`;
+}
+
 // Used by the catalog admin page to default the vendor field when someone
 // pastes a product URL instead of picking a vendor manually.
 export function detectVendorFromUrl(url: string | null | undefined): SupplyVendor {

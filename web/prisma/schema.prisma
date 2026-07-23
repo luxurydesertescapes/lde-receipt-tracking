@@ -164,6 +164,10 @@ enum SupplyOrderStatus {
 model SupplyItem {
   id               String        @id @default(cuid())
   name             String        @unique
+  // Clean, team-facing label (e.g. "Sheet Set", "13 Gallon Trash Bags")
+  // shown instead of the full scraped product title on the ordering page
+  // and order sheet; falls back to `name` when not set.
+  shortName        String?
   vendor           SupplyVendor
   url              String?
   imageUrl         String?
@@ -186,6 +190,13 @@ model SupplyItem {
 // pending (submitted) -> ordered (placed with vendor) -> delivered.
 model SupplyOrder {
   id                String            @id @default(cuid())
+  // Human-facing sequential number (e.g. "SO-0007"), assigned in
+  // app/api/supplies/orders/route.ts at creation time — not a DB
+  // autoincrement since SQLite only allows that on the @id field, and this
+  // needs to survive the later Postgres migration unchanged. createdAt is
+  // still the date of record; this is an additional identifier, not a
+  // replacement for it.
+  orderNumber       Int               @unique
   propertyId        String
   property          Property          @relation(fields: [propertyId], references: [id])
   requestedByEmail  String

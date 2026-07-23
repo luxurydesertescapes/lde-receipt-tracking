@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import SuppliesNav from "../SuppliesNav";
-import { STATUS_LABELS } from "@/lib/supplies/constants";
+import { STATUS_LABELS, formatOrderNumber } from "@/lib/supplies/constants";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
@@ -72,6 +72,7 @@ export default async function SupplyOrdersPage({
         <table className="w-full min-w-[700px] text-left text-sm">
           <thead className="border-b border-neutral-200 text-neutral-500 dark:border-neutral-800">
             <tr>
+              <th className="py-2 pr-3">Order #</th>
               <th className="py-2 pr-3">Submitted</th>
               <th className="py-2 pr-3">Property</th>
               <th className="py-2 pr-3">Requested By</th>
@@ -82,6 +83,11 @@ export default async function SupplyOrdersPage({
           <tbody>
             {orders.map((order) => (
               <tr key={order.id} className="border-b border-neutral-100 dark:border-neutral-900">
+                <td className="py-2 pr-3 whitespace-nowrap font-medium">
+                  <Link href={`/supplies/orders/${order.id}`} className="hover:underline">
+                    {formatOrderNumber(order.orderNumber)}
+                  </Link>
+                </td>
                 <td className="py-2 pr-3 whitespace-nowrap">
                   {order.createdAt.toISOString().slice(0, 10)}
                 </td>
@@ -101,7 +107,7 @@ export default async function SupplyOrdersPage({
             ))}
             {orders.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-neutral-500">
+                <td colSpan={6} className="py-6 text-center text-neutral-500">
                   No orders yet — submit one from{" "}
                   <Link href="/supplies" className="underline">
                     Order Supplies

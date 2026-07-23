@@ -7,6 +7,7 @@ export default function NewItemForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [shortName, setShortName] = useState("");
   const [url, setUrl] = useState("");
   const [isCommon, setIsCommon] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -24,10 +25,16 @@ export default function NewItemForm() {
       const res = await fetch("/api/supplies/catalog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), url: url.trim() || undefined, isCommon }),
+        body: JSON.stringify({
+          name: name.trim(),
+          shortName: shortName.trim() || undefined,
+          url: url.trim() || undefined,
+          isCommon,
+        }),
       });
       if (!res.ok) throw new Error("Failed to add item.");
       setName("");
+      setShortName("");
       setUrl("");
       setIsCommon(false);
       setOpen(false);
@@ -60,6 +67,12 @@ export default function NewItemForm() {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Item name"
+        className="rounded border border-neutral-300 p-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+      />
+      <input
+        value={shortName}
+        onChange={(e) => setShortName(e.target.value)}
+        placeholder="Short name shown to the ordering team (optional)"
         className="rounded border border-neutral-300 p-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
       />
       <input

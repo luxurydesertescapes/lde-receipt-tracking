@@ -8,6 +8,7 @@ import { VENDOR_LABELS } from "@/lib/supplies/constants";
 interface Item {
   id: string;
   name: string;
+  shortName: string | null;
   vendor: SupplyVendor;
   url: string | null;
   imageUrl: string | null;
@@ -23,6 +24,7 @@ export default function CatalogItemRow({ item }: { item: Item }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(item.name);
+  const [shortName, setShortName] = useState(item.shortName ?? "");
   const [vendor, setVendor] = useState<SupplyVendor>(item.vendor);
   const [url, setUrl] = useState(item.url ?? "");
   const [imageUrl, setImageUrl] = useState(item.imageUrl ?? "");
@@ -46,6 +48,7 @@ export default function CatalogItemRow({ item }: { item: Item }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
+          shortName: shortName.trim() || null,
           vendor,
           url: url.trim() || null,
           imageUrl: imageUrl.trim() || null,
@@ -71,6 +74,11 @@ export default function CatalogItemRow({ item }: { item: Item }) {
         <div className="min-w-0 flex-1">
           <p className={`truncate font-medium ${!item.active ? "text-neutral-400 line-through" : ""}`}>
             {item.name}
+            {item.shortName && (
+              <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-normal text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                Shown as: {item.shortName}
+              </span>
+            )}
           </p>
           <p className="text-xs text-neutral-500">
             {VENDOR_LABELS[item.vendor]}
@@ -93,6 +101,12 @@ export default function CatalogItemRow({ item }: { item: Item }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name"
+            className="rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900"
+          />
+          <input
+            value={shortName}
+            onChange={(e) => setShortName(e.target.value)}
+            placeholder="Short name shown to the ordering team (optional) — e.g. Sheet Set, 13 Gallon Trash Bags"
             className="rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900"
           />
           <div className="flex flex-wrap gap-2">
