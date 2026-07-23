@@ -24,10 +24,15 @@ export const metadata: Metadata = {
 const NAV_ITEMS = [
   { href: "/receipts/new", label: "Add Receipt" },
   { href: "/statements", label: "Upload Statement" },
+  { href: "/supplies", label: "Supplies" },
+];
+
+// Financial-overview pages — only admins see these, in the nav and via
+// each page's own server-side redirect (see lib/admin.ts).
+const ADMIN_NAV_ITEMS = [
   { href: "/review", label: "Review" },
   { href: "/reports", label: "Reports" },
   { href: "/subscriptions", label: "Subscriptions" },
-  { href: "/supplies", label: "Supplies" },
 ];
 
 export default async function RootLayout({
@@ -37,7 +42,9 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   const admin = session ? await currentAdmin() : null;
-  const navItems = admin ? [...NAV_ITEMS, { href: "/team", label: "Team" }] : NAV_ITEMS;
+  const navItems = admin
+    ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS, { href: "/team", label: "Team" }]
+    : NAV_ITEMS;
 
   return (
     <html

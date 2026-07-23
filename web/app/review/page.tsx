@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { currentAdmin } from "@/lib/admin";
 import { CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import AssignPropertyControl from "./AssignPropertyControl";
 import ManualTransactionForm from "./ManualTransactionForm";
@@ -16,6 +18,8 @@ export default async function ReviewPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  if (!(await currentAdmin())) redirect("/");
+
   const params = await searchParams;
   const propertyFilter = typeof params.property === "string" ? params.property : undefined;
   const statusFilter = typeof params.status === "string" ? params.status : undefined;

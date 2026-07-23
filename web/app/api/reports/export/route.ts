@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { currentAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
@@ -14,8 +14,7 @@ function csvEscape(value: string): string {
 }
 
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session) return new Response("Unauthorized", { status: 401 });
+  if (!(await currentAdmin())) return new Response("Forbidden", { status: 403 });
 
   const url = new URL(request.url);
   const monthStr = url.searchParams.get("month") ?? new Date().toISOString().slice(0, 7);

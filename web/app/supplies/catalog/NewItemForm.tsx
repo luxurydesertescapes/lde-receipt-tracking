@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ImageUploadField from "./ImageUploadField";
 
 export default function NewItemForm() {
   const router = useRouter();
@@ -9,6 +10,7 @@ export default function NewItemForm() {
   const [name, setName] = useState("");
   const [shortName, setShortName] = useState("");
   const [url, setUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [isCommon, setIsCommon] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export default function NewItemForm() {
           name: name.trim(),
           shortName: shortName.trim() || undefined,
           url: url.trim() || undefined,
+          imageUrl: imageUrl.trim() || undefined,
           isCommon,
         }),
       });
@@ -36,6 +39,7 @@ export default function NewItemForm() {
       setName("");
       setShortName("");
       setUrl("");
+      setImageUrl("");
       setIsCommon(false);
       setOpen(false);
       router.refresh();
@@ -81,6 +85,7 @@ export default function NewItemForm() {
         placeholder="Product URL (vendor auto-detected)"
         className="rounded border border-neutral-300 p-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
       />
+      <ImageUploadField value={imageUrl} onChange={setImageUrl} />
       <label className="flex items-center gap-1.5 text-xs">
         <input type="checkbox" checked={isCommon} onChange={(e) => setIsCommon(e.target.checked)} />
         Commonly purchased

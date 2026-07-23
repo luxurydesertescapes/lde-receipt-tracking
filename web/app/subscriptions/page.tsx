@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { currentAdmin } from "@/lib/admin";
 
 function money(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -16,6 +18,8 @@ function normalizeVendor(description: string): string {
 }
 
 export default async function SubscriptionsPage() {
+  if (!(await currentAdmin())) redirect("/");
+
   const transactions = await prisma.transaction.findMany({
     orderBy: { txnDate: "asc" },
   });

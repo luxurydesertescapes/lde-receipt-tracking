@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SupplyVendor } from "@prisma/client";
 import { VENDOR_LABELS } from "@/lib/supplies/constants";
+import ImageUploadField from "./ImageUploadField";
 
 interface Item {
   id: string;
@@ -136,12 +137,7 @@ export default function CatalogItemRow({ item }: { item: Item }) {
             placeholder="Product URL (Amazon/Instacart/etc.)"
             className="rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900"
           />
-          <input
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="Image URL (optional)"
-            className="rounded border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-900"
-          />
+          <ImageUploadField value={imageUrl} onChange={setImageUrl} />
           <input
             value={alternativeNote}
             onChange={(e) => setAlternativeNote(e.target.value)}

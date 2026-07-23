@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { currentAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { OVERHEAD_OPTION_VALUE } from "@/lib/constants";
 
@@ -15,9 +15,8 @@ export async function PATCH(
   request: Request,
   ctx: RouteContext<"/api/transactions/[id]">
 ) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await currentAdmin())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

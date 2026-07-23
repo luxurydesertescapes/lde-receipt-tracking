@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { currentAdmin } from "@/lib/admin";
 
 export default async function Home() {
+  const admin = await currentAdmin();
+
   const [needsReview, receiptCount, transactionCount, pendingOrders, totalOrders] =
     await Promise.all([
-      prisma.transaction.count({ where: { needsReview: true } }),
-      prisma.receipt.count(),
-      prisma.transaction.count(),
+      admin ? prisma.transaction.count({ where: { needsReview: true } }) : null,
+      admin ? prisma.receipt.count() : null,
+      admin ? prisma.transaction.count() : null,
       prisma.supplyOrder.count({ where: { status: "pending" } }),
       prisma.supplyOrder.count(),
     ]);
@@ -17,24 +20,26 @@ export default async function Home() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <section className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
-          <Link href="/review" className="group mb-4 block">
-            <h2 className="text-lg font-semibold group-hover:text-brand-gold">Receipt Tracking</h2>
-            <p className="text-sm text-neutral-500">Statements, receipts, and owner billing.</p>
-          </Link>
-          <div className="grid grid-cols-3 gap-3">
-            <Link href="/review" className="rounded-md border border-neutral-200 p-3 transition-colors hover:border-brand-gold dark:border-neutral-800">
-              <div className="text-2xl font-semibold">{needsReview}</div>
-              <div className="text-xs text-neutral-500">Needs review</div>
-            </Link>
-            <Link href="/review" className="rounded-md border border-neutral-200 p-3 transition-colors hover:border-brand-gold dark:border-neutral-800">
-              <div className="text-2xl font-semibold">{receiptCount}</div>
-              <div className="text-xs text-neutral-500">Receipts on file</div>
-            </Link>
-            <Link href="/review" className="rounded-md border border-neutral-200 p-3 transition-colors hover:border-brand-gold dark:border-neutral-800">
-              <div className="text-2xl font-semibold">{transactionCount}</div>
-              <div className="text-xs text-neutral-500">Transactions</div>
-            </Link>
-          </div>
+          <h2 className="text-lg font-semibold">Receipt Tracking</h2>
+          <p className="mb-4 text-sm text-neutral-500">Statements, receipts, and owner billing.</p>
+
+          {admin && (
+            <div className="grid grid-cols-3 gap-3">
+              <Link href="/review" className="rounded-md border border-neutral-200 p-3 transition-colors hover:border-brand-gold dark:border-neutral-800">
+                <div className="text-2xl font-semibold">{needsReview}</div>
+                <div className="text-xs text-neutral-500">Needs review</div>
+              </Link>
+              <Link href="/review" className="rounded-md border border-neutral-200 p-3 transition-colors hover:border-brand-gold dark:border-neutral-800">
+                <div className="text-2xl font-semibold">{receiptCount}</div>
+                <div className="text-xs text-neutral-500">Receipts on file</div>
+              </Link>
+              <Link href="/review" className="rounded-md border border-neutral-200 p-3 transition-colors hover:border-brand-gold dark:border-neutral-800">
+                <div className="text-2xl font-semibold">{transactionCount}</div>
+                <div className="text-xs text-neutral-500">Transactions</div>
+              </Link>
+            </div>
+          )}
+
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href="/receipts/new"

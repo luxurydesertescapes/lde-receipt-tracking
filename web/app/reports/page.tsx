@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { currentAdmin } from "@/lib/admin";
 
 function money(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -16,6 +18,8 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  if (!(await currentAdmin())) redirect("/");
+
   const params = await searchParams;
   const monthStr =
     typeof params.month === "string" ? params.month : new Date().toISOString().slice(0, 7);
