@@ -120,6 +120,24 @@ on:
 Until this is configured the route just 401s (bad/missing signature) —
 nothing else in the app is affected.
 
+### 5. Forgot-password admin notification (optional until you want it live)
+
+There's no self-service reset (logins are admin-assigned, see #1 above) —
+the **Forgot password?** link on `/login` just emails every admin saying
+who asked, so an admin can reset it from `/team`. Uses Gmail SMTP:
+
+1. On the Google account you want notifications sent from (e.g. a shared
+   `luxurydesertescapes.com` address), turn on **2-Step Verification** if
+   it isn't already, at https://myaccount.google.com/security.
+2. Create an app password at https://myaccount.google.com/apppasswords
+   (name it something like "LDE app SMTP").
+3. Put that account's address in `.env.local` as `SMTP_USER`, and the
+   16-character app password (no spaces) as `SMTP_PASS`.
+
+Until this is set, reset requests are logged to the console and skipped —
+nothing else breaks, and the "Forgot password?" page still shows the same
+generic confirmation either way.
+
 ## Deployment (Phase 2)
 
 Two independently-deployable pieces:

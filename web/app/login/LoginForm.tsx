@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 
 export default function LoginForm() {
@@ -56,6 +57,9 @@ export default function LoginForm() {
       >
         {submitting ? "Signing in…" : "Sign in"}
       </button>
+      <Link href="/login/forgot-password" className="text-center text-sm text-neutral-400 underline">
+        Forgot password?
+      </Link>
     </form>
   );
 }
