@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# local-disk storage fallback (real receipt images/PDFs when Drive isn't configured)
+/local-storage/
+
 # production
 /build
 
@@ -32,6 +35,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template every teammate/deploy needs to copy from — see
+# SETUP.md's `cp .env.example .env.local` step. No real secrets in it.
+!.env.example
 
 # vercel
 .vercel

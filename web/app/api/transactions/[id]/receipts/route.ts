@@ -26,8 +26,16 @@ export async function GET(
   const candidates = await prisma.receipt.findMany({
     where: {
       id: { notIn: excludeIds.length ? excludeIds : undefined },
-      category: txn.category ?? undefined,
-      propertyId: txn.category === "property" ? txn.propertyId : undefined,
+      OR: [
+        // Auto-ingested receipts awaiting a category assignment are a
+        // candidate for anything — the admin's attach action is itself
+        // the assignment (see the PATCH handler below).
+        { category: null },
+        {
+          category: txn.category ?? undefined,
+          propertyId: txn.category === "property" ? txn.propertyId : undefined,
+        },
+      ],
     },
     orderBy: { capturedAt: "desc" },
     take: 100,
@@ -58,6 +66,21 @@ export async function POST(
   const body = await request.json();
   const parsed = AttachSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
+
+  const [txn, receipt] = await Promise.all([
+    prisma.transaction.findUnique({ where: { id } }),
+    prisma.receipt.findUnique({ where: { id: parsed.data.receiptId } }),
+  ]);
+  if (!txn || !receipt) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Attaching a still-unassigned auto-ingested receipt to a transaction is
+  // itself the category/property assignment — inherit the transaction's.
+  if (receipt.needsReview) {
+    await prisma.receipt.update({
+      where: { id: receipt.id },
+      data: { category: txn.category, propertyId: txn.propertyId, needsReview: false },
+    });
+  }
 
   const link = await prisma.transactionReceipt.upsert({
     where: { transactionId_receiptId: { transactionId: id, receiptId: parsed.data.receiptId } },

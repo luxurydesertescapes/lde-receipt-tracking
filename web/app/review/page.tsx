@@ -7,6 +7,7 @@ import AssignPropertyControl from "./AssignPropertyControl";
 import ManualTransactionForm from "./ManualTransactionForm";
 import NotesField from "./NotesField";
 import ReceiptMatcher from "./ReceiptMatcher";
+import ReceiptAssignControl from "./ReceiptAssignControl";
 
 function money(cents: number): string {
   const dollars = cents / 100;
@@ -44,6 +45,12 @@ export default async function ReviewPage({
     take: 200,
   });
 
+  const needsReviewReceipts = await prisma.receipt.findMany({
+    where: { needsReview: true },
+    orderBy: { capturedAt: "desc" },
+    take: 100,
+  });
+
   return (
     <main className="mx-auto max-w-6xl p-6">
       <h1 className="mb-4 text-2xl font-semibold">Review</h1>
@@ -51,6 +58,46 @@ export default async function ReviewPage({
       <div className="mb-6">
         <ManualTransactionForm properties={properties} />
       </div>
+
+      {needsReviewReceipts.length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-2 text-lg font-medium">
+            Auto-Ingested Receipts Needing Property/Overhead Assignment
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-left text-sm">
+              <thead className="border-b border-neutral-200 text-neutral-500 dark:border-neutral-800">
+                <tr>
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">Description</th>
+                  <th className="py-2 pr-3">File</th>
+                  <th className="py-2 pr-3">Assign</th>
+                </tr>
+              </thead>
+              <tbody>
+                {needsReviewReceipts.map((r) => (
+                  <tr key={r.id} className="border-b border-neutral-100 dark:border-neutral-900">
+                    <td className="py-2 pr-3 whitespace-nowrap">{r.capturedAt.toISOString().slice(0, 10)}</td>
+                    <td className="py-2 pr-3 max-w-sm truncate" title={r.description}>{r.description}</td>
+                    <td className="py-2 pr-3">
+                      {r.fileUrl ? (
+                        <a href={r.fileUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                          {r.filename ?? "view"}
+                        </a>
+                      ) : (
+                        r.filename ?? "—"
+                      )}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <ReceiptAssignControl receiptId={r.id} properties={properties} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <form className="mb-4 flex flex-wrap gap-3 text-sm" method="get">
         <select name="property" defaultValue={propertyFilter ?? ""} className="rounded border border-neutral-300 p-1.5 dark:border-neutral-700 dark:bg-neutral-900">

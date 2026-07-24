@@ -151,7 +151,7 @@ export async function GET(request: Request) {
 
   for (const r of unmatchedReceipts) {
     if (doc.y > doc.page.height - 220) doc.addPage();
-    const propertyLabel = r.property?.name ?? CATEGORY_LABELS[r.category];
+    const propertyLabel = r.property?.name ?? (r.category ? CATEGORY_LABELS[r.category] : "Needs Review");
     doc.fontSize(10).fillColor("#000").text(
       `${r.capturedAt.toISOString().slice(0, 10)}   ${propertyLabel}` +
         (r.paymentMethod ? `   ${PAYMENT_METHOD_LABELS[r.paymentMethod]}` : "")

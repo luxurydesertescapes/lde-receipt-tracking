@@ -43,7 +43,7 @@ export default async function RootLayout({
   const session = await auth();
   const admin = session ? await currentAdmin() : null;
   const navItems = admin
-    ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS, { href: "/team", label: "Team" }]
+    ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS, { href: "/team", label: "Team" }, { href: "/email-accounts", label: "Auto-Ingestion" }]
     : NAV_ITEMS;
 
   return (

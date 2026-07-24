@@ -12,7 +12,14 @@ export default auth((req) => {
   // Slack calls this server-to-server with no browser session — it proves
   // itself via its own request signature (see lib/slack.ts), not a cookie.
   const isSlackWebhook = req.nextUrl.pathname === "/api/slack/events";
-  if (!req.auth && !isAuthRoute && !isLoginPage && !isSlackWebhook) {
+  // Vercel Cron calls these server-to-server with no browser session —
+  // each proves itself via CRON_SECRET (or an admin session) inside the
+  // route handler itself; see app/api/email-accounts/sync and
+  // app/api/slack/sync.
+  const isCronSyncRoute =
+    req.nextUrl.pathname === "/api/email-accounts/sync" ||
+    req.nextUrl.pathname === "/api/slack/sync";
+  if (!req.auth && !isAuthRoute && !isLoginPage && !isSlackWebhook && !isCronSyncRoute) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     return NextResponse.redirect(loginUrl);
   }

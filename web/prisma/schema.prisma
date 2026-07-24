@@ -79,7 +79,11 @@ model Receipt {
   filename      String?
   mimeType      String?
   uploadedBy    String
-  category      Category
+  // Nullable: every human-facing upload path (app form, Slack) always
+  // collects this, but auto-ingested email receipts often can't tell
+  // overhead from a specific property from the order-confirmation text
+  // alone — those land as null + needsReview until an admin assigns one.
+  category      Category?
   propertyId    String?
   property      Property?     @relation(fields: [propertyId], references: [id])
   description   String
@@ -90,6 +94,10 @@ model Receipt {
   source        ReceiptSource
   capturedAt    DateTime      @default(now())
   createdAt     DateTime      @default(now())
+  // True for auto-ingested receipts still missing a property/category
+  // assignment (see category above). Always false for the app/Slack paths,
+  // which require the assignment up front.
+  needsReview   Boolean       @default(false)
   // Populated once the Notion ledger sync succeeds; null means "not synced
   // yet" (e.g. NOTION_TOKEN isn't configured), not an error state.
   notionPageId  String?
@@ -97,12 +105,43 @@ model Receipt {
   // (it retries any event whose webhook ack takes too long or errors).
   slackChannel  String?
   slackTs       String?
+  // Gmail message id, for de-duplicating email auto-ingestion re-scans
+  // (each sync pass re-searches a rolling window rather than tracking a
+  // precise cursor, so the same message may be seen more than once).
+  emailMessageId String?
 
   transactions TransactionReceipt[]
 
   @@index([capturedAt])
   @@index([propertyId])
   @@index([slackChannel, slackTs])
+  @@index([emailMessageId])
+}
+
+// Singleton row (id is always "singleton") tracking the last successful
+// Slack history backfill search — separate from the real-time Events API
+// webhook (app/api/slack/events/route.ts), which ingests new messages as
+// they're posted. This covers messages the live webhook missed: posted
+// before the bot existed, in a channel added to SLACK_MONITORED_CHANNELS
+// later, or during any webhook downtime.
+model SlackSyncState {
+  id            String    @id @default("singleton")
+  lastSyncedAt  DateTime?
+  lastSyncError String?
+}
+
+// One connected inbox (of the 5 the company uses) that email auto-ingestion
+// scans for vendor receipts/invoices. Each inbox owner authorizes this app
+// via their own Google OAuth consent (read-only Gmail scope) — a service
+// account can't reach personal @gmail.com inboxes the way it can Drive.
+model EmailAccount {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  refreshToken   String
+  connectedBy    String
+  lastSyncedAt   DateTime?
+  lastSyncError  String?
+  createdAt      DateTime  @default(now())
 }
 
 // Generalizes receipt-recon's Charge (bofa.py/citi.py) and HDRow

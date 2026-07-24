@@ -8,8 +8,12 @@ export interface CreateReceiptParams {
   buffer: Buffer;
   filename: string;
   mimeType: string;
-  /** A Property id, or the OVERHEAD_OPTION_VALUE sentinel. */
-  property: string;
+  /**
+   * A Property id, the OVERHEAD_OPTION_VALUE sentinel, or null when the
+   * source can't tell (e.g. an auto-ingested email order confirmation) —
+   * null lands the receipt in the needs-review queue for an admin to assign.
+   */
+  property: string | null;
   description: string;
   paymentMethod: PaymentMethod | null;
   source: ReceiptSource;
@@ -17,6 +21,7 @@ export interface CreateReceiptParams {
   capturedAt?: Date;
   slackChannel?: string;
   slackTs?: string;
+  emailMessageId?: string;
 }
 
 export class UnknownPropertyError extends Error {}
@@ -29,17 +34,19 @@ export class UnknownPropertyError extends Error {}
  * active, creating the Prisma row, and syncing it to the Notion ledger.
  */
 export async function createReceipt(params: CreateReceiptParams): Promise<Receipt> {
+  const needsReview = params.property === null;
   const isOverhead = params.property === OVERHEAD_OPTION_VALUE;
-  const propertyRecord = isOverhead
-    ? null
-    : await prisma.property.findUnique({ where: { id: params.property } });
-  if (!isOverhead && !propertyRecord) {
+  const propertyRecord =
+    needsReview || isOverhead
+      ? null
+      : await prisma.property.findUnique({ where: { id: params.property! } });
+  if (!needsReview && !isOverhead && !propertyRecord) {
     throw new UnknownPropertyError(`Unknown property: ${params.property}`);
   }
 
-  const category: Category = isOverhead ? "overhead" : "property";
+  const category: Category | null = needsReview ? null : isOverhead ? "overhead" : "property";
   const capturedAt = params.capturedAt ?? new Date();
-  const folderLabel = isOverhead ? "Company Overhead" : propertyRecord!.name;
+  const folderLabel = needsReview ? "Needs Review" : isOverhead ? "Company Overhead" : propertyRecord!.name;
 
   const stored = await storage.save({
     buffer: params.buffer,
@@ -64,8 +71,10 @@ export async function createReceipt(params: CreateReceiptParams): Promise<Receip
       paymentMethod: params.paymentMethod,
       source: params.source,
       capturedAt,
+      needsReview,
       slackChannel: params.slackChannel,
       slackTs: params.slackTs,
+      emailMessageId: params.emailMessageId,
     },
   });
 

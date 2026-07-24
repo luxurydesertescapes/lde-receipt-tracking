@@ -101,9 +101,11 @@ export async function POST(request: Request) {
     resolvedHouse = null; // matching service unreachable — fall through to Overhead + review
   }
 
-  let property = OVERHEAD_OPTION_VALUE;
+  let property: string | null = null;
   let propertyName: string | null = null;
-  if (resolvedHouse && resolvedHouse !== "OVERHEAD") {
+  if (resolvedHouse === "OVERHEAD") {
+    property = OVERHEAD_OPTION_VALUE;
+  } else if (resolvedHouse) {
     const record = await prisma.property.findUnique({ where: { name: resolvedHouse } });
     if (record) {
       property = record.id;
@@ -131,7 +133,9 @@ export async function POST(request: Request) {
 
   const confirmation = propertyName
     ? `✅ Logged to *${propertyName}*.`
-    : `✅ Logged under *Company Overhead* — I couldn't tell which property this was for from your message, so double-check it in the app if it should be billed to an owner.`;
+    : property === OVERHEAD_OPTION_VALUE
+      ? `✅ Logged under *Company Overhead*.`
+      : `✅ Logged — I couldn't tell which property this was for from your message, so it's in the Review queue in the app for someone to assign.`;
   await postSlackReply({ channel: event.channel, threadTs: event.ts, text: confirmation });
 
   return NextResponse.json({ ok: true });

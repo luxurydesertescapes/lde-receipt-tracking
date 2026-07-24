@@ -99,6 +99,9 @@ on:
    - `chat:write` (post the "✅ Logged to X" confirmation reply)
    - `users:read.email` (optional — attributes receipts to a real email
      instead of a Slack user ID; skip if you'd rather not grant it)
+   - `channels:read` (optional — lets the history-backfill search in step 8
+     below auto-discover every channel the bot's in, instead of only the
+     ones you list in `SLACK_MONITORED_CHANNELS`)
 3. Still on **OAuth & Permissions**, click **Install to Workspace**, then
    copy the **Bot User OAuth Token** (`xoxb-...`) into `.env.local` /
    your production env as `SLACK_BOT_TOKEN`.
@@ -115,12 +118,73 @@ on:
 7. In each of those channels, right-click → **View channel details** →
    copy the Channel ID (bottom of the panel), and set
    `SLACK_MONITORED_CHANNELS` to the comma-separated list. Leave it empty
-   to watch every channel the bot's been invited to.
+   to watch every channel the bot's been invited to (requires the
+   `channels:read` scope from step 2 — without it, leave this empty and the
+   history-backfill search below just won't have anything to search until
+   you set it explicitly).
+8. **Slack Message History search** (on **/email-accounts** in the app,
+   alongside Email Accounts) is a second, independent path on top of the
+   live webhook above — it backfill-searches channel history for anything
+   the live listener missed (messages posted before the bot was added, or
+   during any webhook downtime). It reuses the same bot token/channels
+   above, runs hourly via Vercel Cron (`web/vercel.json`), and also has a
+   **Search Slack Now** button for on-demand runs. Needs `CRON_SECRET` set
+   (see the Email Auto-Ingestion section below) for the cron job to authenticate.
 
-Until this is configured the route just 401s (bad/missing signature) —
-nothing else in the app is affected.
+Until this is configured, the live webhook route just 401s (bad/missing
+signature) and the history search shows "no channels to search" — nothing
+else in the app is affected.
 
-### 5. Forgot-password admin notification (optional until you want it live)
+### 5. Email auto-ingestion (Phase 3 — scans inboxes for receipts/invoices)
+
+Connects to any of the 5 company inboxes (`drewmaclurg@gmail.com`,
+`luxurydesertescapes@gmail.com`, `dmaclurg@luxurydesertescapes.com`,
+`reservations@luxurydesertescapes.com`, `invoicelde@gmail.com`) and scans
+each hourly for vendor order confirmations/invoices (Amazon, Instacart,
+Costco, Home Depot, or subject containing "invoice"/"receipt"), filing each
+as a needs-review receipt — see **/email-accounts** and the "Auto-Ingested
+Receipts" section on **/review**.
+
+This needs its own Google OAuth client (separate from Drive's service
+account) because a service account can't reach personal `@gmail.com`
+inboxes the way it can a shared Drive folder — each inbox owner has to
+individually grant read-only Gmail access.
+
+1. In Google Cloud Console (same or a new project), go to **APIs & Services
+   → Library**, enable the **Gmail API**.
+2. **APIs & Services → OAuth consent screen** — if not already configured,
+   set it up as **External** (since the personal `@gmail.com` inboxes
+   aren't part of the `luxurydesertescapes.com` Workspace), add your own
+   email as a **test user** for now (lets you connect inboxes immediately
+   without Google's app-verification review, which isn't needed for an
+   internal 5-inbox tool).
+3. **APIs & Services → Credentials → Create Credentials → OAuth client ID**,
+   type **Web application**. Under **Authorized redirect URIs**, add:
+   `https://ldeoperations.com/api/email-accounts/callback` (and
+   `http://localhost:3000/api/email-accounts/callback` too, if you want to
+   test connecting an inbox locally).
+4. Copy the **Client ID** and **Client Secret** into `.env.local` /
+   production env as `GOOGLE_GMAIL_CLIENT_ID` and `GOOGLE_GMAIL_CLIENT_SECRET`.
+5. On the deployed app, sign in as an admin, go to **/email-accounts**, and
+   click **+ Connect an Inbox** once per inbox — this opens Google's consent
+   screen; whoever's logged into that Google account in the browser at that
+   moment is the inbox that gets connected (log out/use an incognito window
+   between each of the 5 to connect them all from one computer).
+6. Set `CRON_SECRET` to any random string (e.g. `openssl rand -hex 32`) in
+   the production env — this is what authorizes the hourly Vercel Cron job
+   (`web/vercel.json`) to call the sync endpoint without an admin session.
+
+Until `GOOGLE_GMAIL_CLIENT_ID`/`GOOGLE_GMAIL_CLIENT_SECRET` are set,
+**/email-accounts** just shows a "not configured yet" notice — nothing else
+breaks.
+
+**Note on Vercel's Hobby plan:** scheduled Crons on the free Hobby tier only
+run once a day (not hourly), regardless of the schedule in `vercel.json` —
+this is a Vercel platform limit, not something in this app's code. If
+you're on Hobby, hitting **Search Now** on /email-accounts manually (or
+upgrading to Pro) is what actually gets you hourly-equivalent freshness.
+
+### 6. Forgot-password admin notification (optional until you want it live)
 
 There's no self-service reset (logins are admin-assigned, see #1 above) —
 the **Forgot password?** link on `/login` just emails every admin saying

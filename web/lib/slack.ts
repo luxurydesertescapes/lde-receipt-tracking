@@ -72,6 +72,87 @@ export async function lookupSlackUserEmail(userId: string): Promise<string> {
   }
 }
 
+/**
+ * Channels to backfill-search for receipts: SLACK_MONITORED_CHANNELS if set,
+ * otherwise every public channel the bot is a member of (requires the
+ * `channels:read` bot scope — if that scope is missing, this quietly
+ * returns an empty list rather than throwing, same as every other
+ * not-yet-configured integration in this app; see SETUP.md).
+ */
+export async function listChannelsToSearch(): Promise<string[]> {
+  if (monitoredChannels.size > 0) return [...monitoredChannels];
+  if (!BOT_TOKEN) return [];
+
+  const ids: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const url = new URL("https://slack.com/api/conversations.list");
+    url.searchParams.set("types", "public_channel");
+    url.searchParams.set("exclude_archived", "true");
+    url.searchParams.set("limit", "200");
+    if (cursor) url.searchParams.set("cursor", cursor);
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${BOT_TOKEN}` } });
+    const body = await res.json();
+    if (!body.ok) {
+      console.log(`[slack] conversations.list unavailable (${body.error}) — set SLACK_MONITORED_CHANNELS to search specific channels instead.`);
+      return [];
+    }
+    for (const c of body.channels ?? []) {
+      if (c.is_member && c.id) ids.push(c.id);
+    }
+    cursor = body.response_metadata?.next_cursor || undefined;
+  } while (cursor);
+
+  return ids;
+}
+
+export interface SlackHistoryFile {
+  id: string;
+  name: string;
+  mimetype: string;
+  url_private: string;
+  filetype: string;
+}
+
+export interface SlackHistoryMessage {
+  ts: string;
+  user?: string;
+  text?: string;
+  files: SlackHistoryFile[];
+}
+
+/** Fetches every message with an image/PDF attachment in `channel` since `oldest` (Slack epoch-seconds string), paginating through conversations.history. */
+export async function fetchChannelHistory(channel: string, oldest: string): Promise<SlackHistoryMessage[]> {
+  if (!BOT_TOKEN) return [];
+  const messages: SlackHistoryMessage[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const url = new URL("https://slack.com/api/conversations.history");
+    url.searchParams.set("channel", channel);
+    url.searchParams.set("oldest", oldest);
+    url.searchParams.set("limit", "200");
+    if (cursor) url.searchParams.set("cursor", cursor);
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${BOT_TOKEN}` } });
+    const body = await res.json();
+    if (!body.ok) throw new Error(`conversations.history failed for ${channel}: ${body.error}`);
+
+    for (const m of body.messages ?? []) {
+      const files = (m.files ?? []).filter(
+        (f: SlackHistoryFile) => f.mimetype?.startsWith("image/") || f.mimetype === "application/pdf"
+      );
+      if (files.length > 0) {
+        messages.push({ ts: m.ts, user: m.user, text: m.text, files });
+      }
+    }
+    cursor = body.response_metadata?.next_cursor || undefined;
+  } while (cursor);
+
+  return messages;
+}
+
 /** Posts a threaded confirmation/error reply so the team gets feedback
  * without leaving Slack (e.g. "logged to Wanderlust" or "couldn't tell
  * which property — logged to Company Overhead for review"). */
